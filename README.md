@@ -1,16 +1,16 @@
 # TofuPalWoffu
 
-Extension de Chrome (Manifest V3) para preparar fichajes en Woffu en modo *dry-run*. Permite:
+Chrome Extension (Manifest V3) for preparing time entries in Woffu in *dry-run* mode. Features:
 
-- Configurar credenciales y bloques horarios directamente desde el popup.
-- Consultar el resumen mensual de diario y detectar dias sin fichaje valido.
-- Previsualizar la carga (`PUT /api/diaries/{diaryId}/workday/slots/self`) para uno o varios dias antes de enviarla.
-- Mantener los datos en local (`chrome.storage`) sin realizar envios reales (modo dry-run siempre activo por defecto).
+- Configure credentials and time blocks directly from the popup.
+- Query monthly diary summary and detect days without valid time entries.
+- Preview the payload (`PUT /api/diaries/{diaryId}/workday/slots/self`) for one or multiple days before sending.
+- Keep data locally (`chrome.storage`) without making real submissions (dry-run mode always active by default).
 
-## Estructura
+## Structure
 
 ```
-tools/woffu-extension/
+woffu-extension/
   manifest.json
   popup.html
   options.html
@@ -26,76 +26,76 @@ tools/woffu-extension/
   README.md
 ```
 
-Los ejemplos de peticiones reales extraidos de `~/Documents/woffu/requests.txt` se han traducido a los esquemas JSON incluidos en `schemas/`, que sirven de guia para validar los datos utilizados por la extension.
+The real request examples extracted from `~/Documents/woffu/requests.txt` have been translated to JSON schemas included in `schemas/`, which serve as a guide to validate the data used by the extension.
 
-## Instalacion en Chrome (modo desarrollador)
+## Chrome Installation (Developer Mode)
 
-1. Empaqueta o copia la carpeta completa `tools/woffu-extension/` en tu máquina.
-2. Abre `chrome://extensions/` y activa **Modo desarrollador**.
-3. Usa **Cargar descomprimida** y selecciona la carpeta de la extension.
-4. Fija el icono en la barra para acceder rápidamente.
+1. Package or copy the complete `woffu-extension/` folder to your machine.
+2. Open `chrome://extensions/` and enable **Developer mode**.
+3. Use **Load unpacked** and select the extension folder.
+4. Pin the icon in the toolbar for quick access.
 
-## Configuracion inicial
+## Initial Configuration
 
-1. Abre el popup y completa los campos básicos:
-   - **Base URL**: por ejemplo `https://xxxxx.woffu.com`.
-   - **User ID**: tu identificador numérico (ej. `xxxxxx`).
-   - **Bearer token**: pega el JWT actual de Woffu.
-   - **Comentario**: texto opcional que se añadirá a cada fichaje.
-  - **Offset respecto UTC**: se detecta automáticamente según tu zona horaria (considera horario de verano/invierno).
-  - **Bloques horarios (Lunes-Jueves)**: bloques por defecto para días laborables (ej. `08:00-13:00` y `14:00-17:30`).
-  - **Bloques horarios (Viernes)**: bloques específicos para viernes (por defecto: `08:00-15:00`).
-2. **Los datos se guardan automáticamente** al modificar cualquier campo (sin necesidad de pulsar ningún botón).
-3. **Detección automática**: si abres el popup mientras navegas en `*.woffu.com`, la extensión intentará detectar automáticamente:
-   - Base URL (desde el dominio)
-   - User ID (desde localStorage, sessionStorage, URL o DOM)
-   - Bearer token (desde localStorage, sessionStorage o requests)
-   - Offset UTC (desde la zona horaria del navegador, ajustándose automáticamente a horario de verano/invierno)
+1. Open the popup and fill in the basic fields:
+   - **Base URL**: for example `https://xxxxx.woffu.com`.
+   - **User ID**: your numeric identifier (e.g. `xxxxxx`).
+   - **Bearer token**: paste your current Woffu JWT.
+   - **Comment**: optional text that will be added to each time entry.
+   - **UTC Offset**: automatically detected based on your timezone (considers daylight saving time).
+   - **Time blocks (Monday-Thursday)**: default blocks for working days (e.g. `08:00-13:00` and `14:00-17:30`).
+   - **Time blocks (Friday)**: specific blocks for Fridays (default: `08:00-15:00`).
+2. **Data is saved automatically** when modifying any field (no need to press any button).
+3. **Automatic detection**: if you open the popup while browsing `*.woffu.com`, the extension will try to automatically detect:
+   - Base URL (from the domain)
+   - User ID (from localStorage, sessionStorage, URL or DOM)
+   - Bearer token (from localStorage, sessionStorage or requests)
+   - UTC Offset (from browser timezone, automatically adjusting for daylight saving time)
 
-## Flujo de uso
+## Usage Flow
 
-1. Selecciona el mes con el selector (`YYYY-MM`).
-2. Pulsa **Cargar registros**. La extension consulta `GET /api/svc/core/diariesquery/users/{userId}/diaries/summary/presence` y filtra los dias editables pendientes (sin fichaje, con diferencia negativa o solicitudes pendientes).
-3. Revisa la tabla de "Dias pendientes":
-  - Cada fila incluye checkbox para incluir/excluir el dia.
-  - **Selección automática inteligente**:
-    - ✓ **Se marcan por defecto**: días sin bloques de fichaje
-    - ✗ **NO se marcan**: el día actual, días con estado "pendiente" o días que ya tienen bloques
-  - Indicadores visuales:
-    - 🟢 **"Hoy"**: marca el día actual
-    - 🟡 **"Pendiente"**: solicitudes pendientes de aprobación
-    - 🔴 **"Sin bloques"**: no tiene fichajes registrados (se marcan automáticamente)
-    - ⚪ **"Sin fichaje"**: tiene bloques pero diferencia negativa
-  - Boton **Vista previa** para generar el payload del dia.
-  - **La extensión detecta automáticamente si es viernes** y aplica los bloques horarios correspondientes.
-4. Utiliza los botones de la parte inferior:
-  - **Previsualizar dia**: toma el primer dia seleccionado o el marcado con *Vista previa*.
-  - **Previsualizar selección**: genera un arreglo con todos los payloads marcados.
-  - **Enviar selección**: envía los días seleccionados a Woffu (requiere confirmación previa).
-5. El resultado aparece en la seccion "Vista previa":
-   - Para previsualizaciones: muestra el endpoint y la carga que se enviaría.
-   - Para envíos: muestra el resultado de cada request (éxito/fallo) y recarga automáticamente los registros.
+1. Select the month with the picker (`YYYY-MM`).
+2. Click **Load records**. The extension queries `GET /api/svc/core/diariesquery/users/{userId}/diaries/summary/presence` and filters editable pending days (no time entry, negative difference or pending requests).
+3. Review the "Pending days" table:
+   - Each row includes a checkbox to include/exclude the day.
+   - **Smart automatic selection**:
+     - ✓ **Checked by default**: days without time entry blocks
+     - ✗ **NOT checked**: current day, days with "pending" status or days that already have blocks
+   - Visual indicators:
+     - 🟢 **"Today"**: marks the current day
+     - 🟡 **"Pending"**: pending approval requests
+     - 🔴 **"No blocks"**: no registered time entries (automatically checked)
+     - ⚪ **"No entry"**: has blocks but negative difference
+   - **Preview** button to generate the day's payload.
+   - **The extension automatically detects if it's Friday** and applies the corresponding time blocks.
+4. Use the bottom buttons:
+   - **Preview day**: takes the first selected day or the one marked with *Preview*.
+   - **Preview selection**: generates an array with all checked payloads.
+   - **Send selection**: sends selected days to Woffu (requires prior confirmation).
+5. The result appears in the "Preview" section:
+   - For previews: shows the endpoint and the payload that would be sent.
+   - For submissions: shows the result of each request (success/failure) and automatically reloads records.
 
-## Modo dry-run y envíos reales
+## Dry-run Mode and Real Submissions
 
-- El flag `dryRun` permanece visible en la configuración para referencia, pero ya no afecta al envío.
-- La función `buildDryRunResponse` devuelve la estructura de previsualización para inspección.
-- Al pulsar **Enviar selección**, la extensión:
-  1. Muestra un diálogo de confirmación con los días a enviar
-  2. Ejecuta las llamadas `PUT` a la API de Woffu
-  3. Muestra el resultado detallado de cada envío (éxito/fallo)
-  4. Recarga automáticamente los registros después de 2 segundos
+- The `dryRun` flag remains visible in the configuration for reference, but no longer affects submission.
+- The `buildDryRunResponse` function returns the preview structure for inspection.
+- When clicking **Send selection**, the extension:
+  1. Shows a confirmation dialog with the days to send
+  2. Executes the `PUT` calls to the Woffu API
+  3. Shows detailed result of each submission (success/failure)
+  4. Automatically reloads records after 2 seconds
 
-## Consideraciones de seguridad
+## Security Considerations
 
-- La extension almacena el JWT en el almacenamiento local del navegador; recuerda renovarlo manualmente cuando caduque.
-- La extensión intenta detectar el token automáticamente desde las páginas de Woffu, pero nunca lo envía a terceros.
-- Evita compartir la carpeta de la extension con el token incrustado.
-- Si prefieres trabajar solo con datos de prueba, deja el token vacio y pega respuestas manualmente en la consola (`previewOutput`).
+- The extension stores the JWT in the browser's local storage; remember to renew it manually when it expires.
+- The extension tries to detect the token automatically from Woffu pages, but never sends it to third parties.
+- Avoid sharing the extension folder with the embedded token.
+- If you prefer to work only with test data, leave the token empty and paste responses manually in the console (`previewOutput`).
 
-## Próximos pasos sugeridos
+## Suggested Next Steps
 
-- Permitir importar directamente un fichero JSON de configuracion.
-- Anadir control granular por dia para modificar bloques horarios antes de previsualizar.
-- Integrar notificaciones o badges cuando existan dias pendientes.
-- Implementar el `PUT` real condicionado por un switch de seguridad adicional.
+- Allow importing a JSON configuration file directly.
+- Add granular control per day to modify time blocks before previewing.
+- Integrate notifications or badges when pending days exist.
+- Implement real `PUT` conditioned by an additional security switch.

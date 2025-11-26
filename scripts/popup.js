@@ -28,7 +28,7 @@ const previewOutput = document.getElementById("preview-output");
 
 function formatDate(dateString) {
   const date = new Date(dateString + "T00:00:00");
-  return date.toLocaleDateString("es-ES", { weekday: "short", day: "2-digit", month: "short" });
+  return date.toLocaleDateString("en-US", { weekday: "short", day: "2-digit", month: "short" });
 }
 
 function getDefaultMonthValue() {
@@ -55,7 +55,7 @@ function createSlotRow(slot, index, parentList) {
   const removeBtn = document.createElement("button");
   removeBtn.type = "button";
   removeBtn.className = "danger";
-  removeBtn.textContent = "Eliminar";
+  removeBtn.textContent = "Remove";
   removeBtn.addEventListener("click", () => {
     parentList.removeChild(row);
     if (!parentList.querySelector(".slot-row")) {
@@ -112,7 +112,7 @@ function renderPendingTable() {
     emptyRow.className = "empty";
     const cell = document.createElement("td");
     cell.colSpan = 5;
-    cell.textContent = "No hay dias pendientes para este mes.";
+    cell.textContent = "No pending days for this month.";
     emptyRow.appendChild(cell);
     tableBody.appendChild(emptyRow);
     return;
@@ -160,7 +160,7 @@ function renderPendingTable() {
     if (isToday) {
       const todayBadge = document.createElement("span");
       todayBadge.className = "badge success";
-      todayBadge.textContent = "Hoy";
+      todayBadge.textContent = "Today";
       todayBadge.style.marginLeft = "8px";
       dateCell.appendChild(todayBadge);
     }
@@ -170,13 +170,13 @@ function renderPendingTable() {
     
     if (entry.isPending) {
       badge.className = "badge warning";
-      badge.textContent = "Pendiente";
+      badge.textContent = "Pending";
     } else if (!entry.hasSlots) {
       badge.className = "badge error";
-      badge.textContent = "Sin bloques";
+      badge.textContent = "No blocks";
     } else {
       badge.className = "badge";
-      badge.textContent = "Sin fichaje";
+      badge.textContent = "No entry";
     }
     
     statusCell.appendChild(badge);
@@ -188,7 +188,7 @@ function renderPendingTable() {
     const previewBtn = document.createElement("button");
     previewBtn.type = "button";
     previewBtn.className = "secondary";
-  previewBtn.textContent = "Vista previa";
+  previewBtn.textContent = "Preview";
     previewBtn.addEventListener("click", () => previewForDates([entry.date]));
     actionsCell.appendChild(previewBtn);
 
@@ -206,7 +206,7 @@ function renderPendingTable() {
 
 async function previewForDates(dates) {
   if (!dates.length) {
-    showMessage("Selecciona al menos un día.");
+    showMessage("Select at least one day.");
     return;
   }
   const payloads = buildPreviewPayloads(pendingDiaries, currentConfig, dates);
@@ -277,18 +277,18 @@ async function handleLoadMonth() {
   const monthValue = monthInput.value || getDefaultMonthValue();
   try {
     loadButton.disabled = true;
-    loadButton.textContent = "Cargando...";
+    loadButton.textContent = "Loading...";
     const summary = await fetchDiarySummary(currentConfig, monthValue);
     pendingDiaries = findPendingDiaries(summary);
     selectedDates.clear(); // Limpiar selección anterior
     renderPendingTable();
-    showMessage("Selecciona dias y genera la vista previa antes de enviar.");
+    showMessage("Select days and generate preview before sending.");
   } catch (error) {
     console.error(error);
-    showMessage(error.message || "No se pudo cargar el mes.");
+    showMessage(error.message || "Could not load month.");
   } finally {
     loadButton.disabled = false;
-    loadButton.textContent = "Cargar registros";
+    loadButton.textContent = "Load records";
   }
 }
 
@@ -306,7 +306,7 @@ function handleSelectAll(event) {
 
 function handlePreviewSingle() {
   if (!selectedDates.size) {
-  showMessage("Selecciona al menos un dia pendiente.");
+  showMessage("Select at least one pending day.");
     return;
   }
   const [firstDate] = Array.from(selectedDates).sort();
@@ -315,7 +315,7 @@ function handlePreviewSingle() {
 
 function handlePreviewMulti() {
   if (!selectedDates.size) {
-  showMessage("Selecciona al menos un dia pendiente.");
+  showMessage("Select at least one pending day.");
     return;
   }
   previewForDates(Array.from(selectedDates).sort());
@@ -323,7 +323,7 @@ function handlePreviewMulti() {
 
 async function handleSendSelection() {
   if (!selectedDates.size) {
-    showMessage("Selecciona al menos un dia pendiente para enviar.");
+    showMessage("Select at least one pending day to send.");
     return;
   }
 
@@ -331,23 +331,23 @@ async function handleSendSelection() {
   const payloads = buildPreviewPayloads(pendingDiaries, currentConfig, dates);
   
   if (!payloads.length) {
-    showMessage("No hay datos válidos para enviar.");
+    showMessage("No valid data to send.");
     return;
   }
 
   // Mostrar confirmación
-  const confirmMessage = `¿Confirmas el envío de ${payloads.length} día(s)?\n\n` +
-    payloads.map(p => `• ${p.date} (${p.slots.length} bloques)`).join('\n') +
-    `\n\nEsto enviará los fichajes a Woffu.`;
+  const confirmMessage = `Confirm sending ${payloads.length} day(s)?\n\n` +
+    payloads.map(p => `• ${p.date} (${p.slots.length} blocks)`).join('\n') +
+    `\n\nThis will send the time entries to Woffu.`;
   
   if (!confirm(confirmMessage)) {
-    showMessage("Envío cancelado.");
+    showMessage("Send cancelled.");
     return;
   }
 
   // Mostrar preview antes de enviar
   const previewData = buildDryRunResponse(payloads, currentConfig);
-  previewOutput.textContent = "Enviando...\n\n" + JSON.stringify(previewData, null, 2);
+  previewOutput.textContent = "Sending...\n\n" + JSON.stringify(previewData, null, 2);
   
   try {
     sendBtn.disabled = true;
@@ -358,15 +358,15 @@ async function handleSendSelection() {
     // Mostrar resultados
     const summary = {
       total: results.length,
-      exitosos: results.filter(r => r.ok).length,
-      fallidos: results.filter(r => !r.ok).length,
-      resultados: results.map(r => ({
-        fecha: r.date,
-        estado: r.ok ? "✓ Exitoso" : "✗ Fallido",
-        codigo: r.status,
-        mensaje: r.statusText,
+      successful: results.filter(r => r.ok).length,
+      failed: results.filter(r => !r.ok).length,
+      results: results.map(r => ({
+        date: r.date,
+        status: r.ok ? "✓ Success" : "✗ Failed",
+        code: r.status,
+        message: r.statusText,
         error: r.error,
-        respuesta: r.body
+        response: r.body
       }))
     };
     
@@ -374,16 +374,16 @@ async function handleSendSelection() {
     
     // Recargar datos después de 2 segundos
     setTimeout(async () => {
-      showMessage("Recargando registros...");
+      showMessage("Reloading records...");
       await handleLoadMonth();
     }, 2000);
     
   } catch (error) {
     console.error(error);
-    showMessage(`Error al enviar: ${error.message}`);
+    showMessage(`Error sending: ${error.message}`);
   } finally {
     sendBtn.disabled = false;
-    sendBtn.textContent = "Enviar selección";
+    sendBtn.textContent = "Send selection";
   }
 }
 
@@ -429,24 +429,24 @@ async function init() {
         }
         if (detected) {
           await saveCurrentConfig();
-          showMessage("Datos detectados automáticamente desde Woffu.");
+          showMessage("Data automatically detected from Woffu.");
         } else {
-          showMessage("Configura tus datos y carga el mes para ver los dias pendientes.");
+          showMessage("Configure your data and load the month to see pending days.");
         }
       } else {
-        showMessage("Configura tus datos y carga el mes para ver los dias pendientes.");
+        showMessage("Configure your data and load the month to see pending days.");
       }
     } else {
-      showMessage("Configura tus datos y carga el mes para ver los dias pendientes.");
+      showMessage("Configure your data and load the month to see pending days.");
     }
   } catch (error) {
     // Si no se puede detectar, no pasa nada
-    console.info("No se pudieron detectar datos automáticamente:", error);
-    showMessage("Configura tus datos y carga el mes para ver los dias pendientes.");
+    console.info("Could not detect data automatically:", error);
+    showMessage("Configure your data and load the month to see pending days.");
   }
 }
 
 init().catch(error => {
   console.error(error);
-  showMessage("No se pudo inicializar la extension.");
+  showMessage("Could not initialize the extension.");
 });

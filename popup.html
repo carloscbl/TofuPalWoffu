@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>TofuPalWoffu</title>
@@ -8,11 +8,11 @@
 <body>
   <main class="container">
     <section class="config">
-      <h1>Configuracion</h1>
+      <h1>Configuration</h1>
       <form id="config-form">
         <div class="field">
           <label for="baseUrl">Base URL</label>
-          <input id="baseUrl" name="baseUrl" type="url" required placeholder="https://empresa.woffu.com">
+          <input id="baseUrl" name="baseUrl" type="url" required placeholder="https://company.woffu.com">
         </div>
         <div class="field">
           <label for="userId">User ID</label>
@@ -20,76 +20,76 @@
         </div>
         <div class="field">
           <label for="bearerToken">Bearer token</label>
-          <textarea id="bearerToken" name="bearerToken" rows="3" placeholder="Pega aquí tu token JWT"></textarea>
+          <textarea id="bearerToken" name="bearerToken" rows="3" placeholder="Paste your JWT token here"></textarea>
         </div>
         <div class="field">
-          <label for="defaultComments">Comentario</label>
-          <input id="defaultComments" name="defaultComments" type="text" placeholder="Opcional">
+          <label for="defaultComments">Comment</label>
+          <input id="defaultComments" name="defaultComments" type="text" placeholder="Optional">
         </div>
         <div class="field">
-          <label for="utcOffset">Offset respecto UTC (minutos)</label>
+          <label for="utcOffset">UTC Offset (minutes)</label>
           <input id="utcOffset" name="utcOffset" type="number" step="1" value="120">
-          <span class="hint">Ejemplo: Madrid en horario de verano = 120</span>
+          <span class="hint">Example: Madrid in summer time = 120</span>
         </div>
         <fieldset class="slots">
-          <legend>Bloques horarios (Lunes-Jueves)</legend>
+          <legend>Time blocks (Monday-Thursday)</legend>
           <div id="slot-list"></div>
-          <button type="button" id="add-slot">Anadir bloque</button>
+          <button type="button" id="add-slot">Add block</button>
         </fieldset>
         <fieldset class="slots">
-          <legend>Bloques horarios (Viernes)</legend>
+          <legend>Time blocks (Friday)</legend>
           <div id="friday-slot-list"></div>
-          <button type="button" id="add-friday-slot">Anadir bloque</button>
+          <button type="button" id="add-friday-slot">Add block</button>
         </fieldset>
         <fieldset class="toggles">
-          <legend>Modo envio</legend>
+          <legend>Send mode</legend>
           <label class="toggle">
             <input id="dryRun" name="dryRun" type="checkbox" checked>
-            <span>Modo dry-run (no envia PUT)</span>
+            <span>Dry-run mode (no PUT sent)</span>
           </label>
         </fieldset>
       </form>
     </section>
 
     <section class="month-picker">
-      <h2>Datos del mes</h2>
+      <h2>Monthly data</h2>
       <div class="field inline">
-        <label for="month">Mes</label>
+        <label for="month">Month</label>
         <input id="month" name="month" type="month">
       </div>
-      <button id="load-month" class="secondary">Cargar registros</button>
+      <button id="load-month" class="secondary">Load records</button>
     </section>
 
     <section class="pending-days">
-  <h2>Dias pendientes</h2>
+  <h2>Pending days</h2>
       <table id="pending-table">
         <thead>
           <tr>
             <th>
               <input type="checkbox" id="select-all" checked>
             </th>
-            <th>Fecha</th>
-            <th>Estado</th>
-            <th>Diferencia</th>
+            <th>Date</th>
+            <th>Status</th>
+            <th>Difference</th>
             <th></th>
           </tr>
         </thead>
         <tbody id="pending-body">
           <tr class="empty">
-            <td colspan="5">Sin datos cargados.</td>
+            <td colspan="5">No data loaded.</td>
           </tr>
         </tbody>
       </table>
       <div class="actions">
-  <button id="preview-single" class="secondary">Previsualizar dia</button>
-        <button id="preview-multi" class="secondary">Previsualizar selección</button>
-        <button id="send-selection" class="primary">Enviar selección</button>
+  <button id="preview-single" class="secondary">Preview day</button>
+        <button id="preview-multi" class="secondary">Preview selection</button>
+        <button id="send-selection" class="primary">Send selection</button>
       </div>
     </section>
 
     <section class="preview">
-  <h2>Vista previa</h2>
-  <pre id="preview-output">Selecciona dias para ver la carga simulada.</pre>
+  <h2>Preview</h2>
+  <pre id="preview-output">Select days to see the simulated payload.</pre>
     </section>
   </main>
   <script type="module" src="scripts/popup.js"></script>

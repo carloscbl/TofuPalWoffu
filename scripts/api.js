@@ -148,10 +148,10 @@ export async function fetchDiarySummary(config, monthValue) {
   const merged = config ?? await loadConfig();
   const baseUrl = sanitizeBaseUrl(merged.baseUrl);
   if (!baseUrl) {
-    throw new Error("Configura la URL base antes de cargar datos.");
+    throw new Error("Configure the base URL before loading data.");
   }
   if (!merged.userId) {
-    throw new Error("Configura el User ID antes de cargar datos.");
+    throw new Error("Configure the User ID before loading data.");
   }
 
   const { from, to } = getMonthBoundaries(monthValue);
@@ -172,7 +172,7 @@ export async function fetchDiarySummary(config, monthValue) {
 
   if (!response.ok) {
     const body = await response.text();
-    throw new Error(`Error al consultar Woffu (${response.status}): ${body}`);
+    throw new Error(`Error querying Woffu (${response.status}): ${body}`);
   }
 
   return response.json();
@@ -235,7 +235,7 @@ export function buildPreviewPayloads(diaries, config, dates) {
 
 export function toPreviewString(payloads) {
   if (!payloads.length) {
-    return "No hay datos seleccionados.";
+    return "No data selected.";
   }
   if (payloads.length === 1) {
     return JSON.stringify(payloads[0], null, 2);
