@@ -1,0 +1,63 @@
+{
+  "$id": "https://github.com/TofuPalWoffu/schemas/workday-slots-put.schema.json",
+  "title": "WoffuWorkdaySlotsPut",
+  "type": "object",
+  "required": ["userId", "date", "slots", "diaryId"],
+  "properties": {
+    "userId": { "type": "integer" },
+    "comments": { "type": "string" },
+    "date": { "type": "string", "format": "date" },
+    "slots": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "in", "out", "totalMin"],
+        "properties": {
+          "id": { "type": "string" },
+          "in": {
+            "type": "object",
+            "required": ["userId", "date", "signIn", "time", "signType", "signStatus"],
+            "properties": {
+              "signId": { "type": "integer" },
+              "userId": { "type": "integer" },
+              "date": { "type": "string", "format": "date-time" },
+              "trueDate": { "type": "string", "format": "date-time" },
+              "signIn": { "type": "boolean" },
+              "time": { "type": "string", "pattern": "^\\d{2}:\\d{2}:\\d{2}$" },
+              "valueTime": { "type": "string" },
+              "shortTime": { "type": "string" },
+              "shortTrueTime": { "type": "string" },
+              "shortValueTime": { "type": "string" },
+              "utcTime": { "type": "string" },
+              "signType": { "type": "integer" },
+              "signStatus": { "type": "integer" }
+            }
+          },
+          "out": {
+            "type": "object",
+            "required": ["userId", "date", "signIn", "time", "signType", "signStatus"],
+            "properties": {
+              "signId": { "type": "integer" },
+              "userId": { "type": "integer" },
+              "date": { "type": "string", "format": "date-time" },
+              "trueDate": { "type": "string", "format": "date-time" },
+              "signIn": { "type": "boolean" },
+              "time": { "type": "string", "pattern": "^\\d{2}:\\d{2}:\\d{2}$" },
+              "valueTime": { "type": "string" },
+              "shortTime": { "type": "string" },
+              "shortTrueTime": { "type": "string" },
+              "shortValueTime": { "type": "string" },
+              "utcTime": { "type": "string" },
+              "signType": { "type": "integer" },
+              "signStatus": { "type": "integer" }
+            }
+          },
+          "motive": { "type": ["string", "null"] },
+          "totalMin": { "type": "integer" }
+        }
+      }
+    },
+    "diaryId": { "type": "integer" }
+  }
+}

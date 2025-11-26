@@ -1,0 +1,74 @@
+{
+  "$id": "https://github.com/TofuPalWoffu/schemas/diary-summary.schema.json",
+  "title": "WoffuDiarySummaryResponse",
+  "type": "object",
+  "required": ["diaries"],
+  "properties": {
+    "diaries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "diaryId",
+          "userId",
+          "date",
+          "isUserEditable",
+          "differenceTime",
+          "isWeekend",
+          "isHoliday"
+        ],
+        "properties": {
+          "diaryId": { "type": "integer" },
+          "diarySummaryId": { "type": "integer" },
+          "userId": { "type": "integer" },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "isWeekend": { "type": "boolean" },
+          "isHoliday": { "type": "boolean" },
+          "isEvent": { "type": "boolean" },
+          "name": { "type": ["string", "null"] },
+          "comments": { "type": ["string", "null"] },
+          "differenceTime": { "type": "number" },
+          "isUserEditable": { "type": "boolean" },
+          "isPending": { "type": ["boolean", "null"] },
+          "workingTimeFormatted": {
+            "type": ["object", "null"],
+            "properties": {
+              "resource": { "type": "string" },
+              "values": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          },
+          "workedTimeFormatted": {
+            "type": ["object", "null"],
+            "properties": {
+              "resource": { "type": "string" },
+              "values": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          },
+          "absenceEvents": {
+            "type": ["array", "null"],
+            "items": {
+              "type": "object",
+              "required": ["allDay", "startDate", "endDate"],
+              "properties": {
+                "allDay": { "type": "boolean" },
+                "startDate": { "type": "string", "format": "date" },
+                "endDate": { "type": "string", "format": "date" },
+                "description": { "type": ["string", "null"] },
+                "totalTime": { "type": ["number", "null"] }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

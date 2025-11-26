@@ -1,0 +1,206 @@
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  margin: 0;
+  background: #f5f7fa;
+  color: #1f2933;
+  min-width: 380px;
+}
+
+.container {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+h1, h2, legend {
+  margin: 0 0 10px 0;
+  font-size: 1.1rem;
+  color: #0b3d91;
+}
+
+form, fieldset {
+  border: 1px solid #d9e2ec;
+  border-radius: 8px;
+  padding: 12px;
+  background: #fff;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.field.inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+
+label {
+  font-weight: 600;
+}
+
+input[type="text"],
+input[type="url"],
+input[type="number"],
+input[type="month"],
+textarea {
+  border: 1px solid #cbd2d9;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 0.95rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+textarea {
+  resize: vertical;
+}
+
+.hint {
+  font-size: 0.78rem;
+  color: #52606d;
+}
+
+.slots {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.slot-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 8px;
+}
+
+.slot-row input {
+  width: auto;
+}
+
+.slot-row button {
+  align-self: center;
+}
+
+button {
+  border: none;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+button.primary {
+  background: #0b3d91;
+  color: #fff;
+}
+
+button.primary:hover {
+  background: #0a357f;
+}
+
+button.secondary {
+  background: #e4ebf5;
+  color: #0b3d91;
+}
+
+button.secondary:hover {
+  background: #d0dbf0;
+}
+
+button.danger {
+  background: #f86a6a;
+  color: #fff;
+}
+
+button.danger:hover {
+  background: #ef4e4e;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#pending-table {
+  border-collapse: collapse;
+  width: 100%;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+#pending-table th,
+#pending-table td {
+  border-bottom: 1px solid #d9e2ec;
+  padding: 8px;
+  font-size: 0.9rem;
+}
+
+#pending-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+#pending-table tbody tr:hover:not(.empty) {
+  background: #f0f4fc;
+}
+
+.badge {
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  background: #e0e8f9;
+  color: #0b3d91;
+}
+
+.badge.warning {
+  background: #fdecc8;
+  color: #a15c07;
+}
+
+.badge.success {
+  background: #d3f9d8;
+  color: #03543f;
+}
+
+.badge.error {
+  background: #fde2e2;
+  color: #c53030;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.actions button {
+  flex: 1;
+  min-width: 120px;
+}
+
+.preview pre, #preview-output {
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 12px;
+  border-radius: 8px;
+  max-height: 220px;
+  overflow: auto;
+  font-size: 0.85rem;
+}
+
+.empty td {
+  text-align: center;
+  color: #7b8794;
+}
