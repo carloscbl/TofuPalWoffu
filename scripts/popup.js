@@ -36,6 +36,22 @@ function getDefaultMonthValue() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
+// Lee el JWT vigente desde la cookie `woffu.token`. Es la fuente más fiable:
+// Woffu guarda ahí el token, y la API chrome.cookies lo lee aunque sea httpOnly.
+async function readWoffuTokenCookie(url) {
+  if (!url || typeof chrome === "undefined" || !chrome.cookies?.get) {
+    return null;
+  }
+  try {
+    const cookie = await chrome.cookies.get({ url, name: "woffu.token" });
+    const token = cookie?.value?.trim();
+    return token || null;
+  } catch (error) {
+    console.info("No se pudo leer la cookie woffu.token:", error);
+    return null;
+  }
+}
+
 function createSlotRow(slot, index, parentList) {
   const row = document.createElement("div");
   row.className = "slot-row";
@@ -409,35 +425,40 @@ async function init() {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (tab?.url?.includes('.woffu.com')) {
       const response = await chrome.tabs.sendMessage(tab.id, { action: "getWoffuData" });
-      if (response?.data) {
-        let detected = false;
-        if (response.data.baseUrl && !currentConfig.baseUrl) {
-          form.baseUrl.value = response.data.baseUrl;
-          detected = true;
-        }
-        if (response.data.userId && !currentConfig.userId) {
-          form.userId.value = response.data.userId;
-          detected = true;
-        }
-        if (response.data.bearerToken && !currentConfig.bearerToken) {
-          form.bearerToken.value = response.data.bearerToken;
-          detected = true;
-        }
-        if (response.data.utcOffset !== null && response.data.utcOffset !== undefined) {
-          form.utcOffset.value = response.data.utcOffset;
-          detected = true;
-        }
-        if (detected) {
-          await saveCurrentConfig();
-          showMessage("Data automatically detected from Woffu.");
-        } else {
-          showMessage("Configure your data and load the month to see pending days.");
-        }
+      const data = response?.data ?? {};
+      let detected = false;
+
+      if (data.baseUrl && !currentConfig.baseUrl) {
+        form.baseUrl.value = data.baseUrl;
+        detected = true;
+      }
+      if (data.userId && !currentConfig.userId) {
+        form.userId.value = data.userId;
+        detected = true;
+      }
+      if (data.utcOffset !== null && data.utcOffset !== undefined) {
+        form.utcOffset.value = data.utcOffset;
+        detected = true;
+      }
+
+      // El token caduca cada ~90 días, así que SIEMPRE lo refrescamos desde la
+      // cookie vigente (no solo cuando está vacío). La cookie es la fuente real.
+      const tabBaseUrl = form.baseUrl.value || `${new URL(tab.url).protocol}//${new URL(tab.url).hostname}`;
+      const cookieToken = await readWoffuTokenCookie(tabBaseUrl);
+      const freshToken = cookieToken || data.bearerToken;
+      if (freshToken && freshToken !== currentConfig.bearerToken) {
+        form.bearerToken.value = freshToken;
+        detected = true;
+      }
+
+      if (detected) {
+        await saveCurrentConfig();
+        showMessage("Data automatically detected from Woffu.");
       } else {
         showMessage("Configure your data and load the month to see pending days.");
       }
     } else {
-      showMessage("Configure your data and load the month to see pending days.");
+      showMessage("Open a Woffu tab to auto-detect your session, then load the month.");
     }
   } catch (error) {
     // Si no se puede detectar, no pasa nada

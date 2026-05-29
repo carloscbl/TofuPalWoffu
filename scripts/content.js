@@ -20,6 +20,17 @@ function extractWoffuData() {
     data.baseUrl = `${window.location.protocol}//${window.location.hostname}`;
   }
 
+  // Woffu guarda el JWT en la cookie `woffu.token`. Es la fuente principal y
+  // tiene prioridad sobre cualquier token suelto en storage.
+  try {
+    const match = document.cookie.match(/(?:^|;\s*)woffu\.token=([^;]+)/);
+    if (match) {
+      data.bearerToken = decodeURIComponent(match[1]);
+    }
+  } catch (e) {
+    console.warn('Error leyendo cookies:', e);
+  }
+
   // Intentar extraer el token del localStorage
   try {
     const localStorageKeys = Object.keys(localStorage);
@@ -28,21 +39,21 @@ function extractWoffuData() {
         const value = localStorage.getItem(key);
         if (!value) continue;
 
-        // Buscar tokens JWT (formato: xxx.yyy.zzz)
-        if (typeof value === 'string' && value.match(/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$/)) {
+        // Buscar tokens JWT (formato: xxx.yyy.zzz). No pisar el de la cookie.
+        if (!data.bearerToken && typeof value === 'string' && value.match(/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$/)) {
           data.bearerToken = value;
         }
 
         // Intentar parsear JSON para buscar tokens
         if (value.startsWith('{') || value.startsWith('[')) {
           const parsed = JSON.parse(value);
-          
-          // Buscar token en diferentes posibles ubicaciones
-          if (parsed.token) data.bearerToken = parsed.token;
-          if (parsed.accessToken) data.bearerToken = parsed.accessToken;
-          if (parsed.access_token) data.bearerToken = parsed.access_token;
-          if (parsed.bearerToken) data.bearerToken = parsed.bearerToken;
-          if (parsed.jwt) data.bearerToken = parsed.jwt;
+
+          // Buscar token en diferentes posibles ubicaciones (sin pisar la cookie)
+          if (!data.bearerToken && parsed.token) data.bearerToken = parsed.token;
+          if (!data.bearerToken && parsed.accessToken) data.bearerToken = parsed.accessToken;
+          if (!data.bearerToken && parsed.access_token) data.bearerToken = parsed.access_token;
+          if (!data.bearerToken && parsed.bearerToken) data.bearerToken = parsed.bearerToken;
+          if (!data.bearerToken && parsed.jwt) data.bearerToken = parsed.jwt;
           
           // Buscar userId
           if (parsed.userId) data.userId = parsed.userId.toString();
