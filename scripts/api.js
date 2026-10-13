@@ -284,10 +284,13 @@ export async function sendWorkdaySlots(payload, config) {
     diaryId: payload.diaryId
   };
 
+  // El cuerpo solo se puede leer una vez, y Woffu responde 204 sin cuerpo al
+  // guardar: se lee como texto y se intenta interpretar como JSON.
+  const text = await response.text().catch(() => "");
   try {
-    responseData.body = await response.json();
-  } catch (error) {
-    responseData.body = await response.text();
+    responseData.body = text ? JSON.parse(text) : null;
+  } catch {
+    responseData.body = text;
   }
 
   return responseData;
