@@ -132,7 +132,7 @@ button:disabled {
   gap: 8px;
 }
 
-#pending-table {
+#pending-table, #calendar-table {
   border-collapse: collapse;
   width: 100%;
   background: #fff;
@@ -141,7 +141,9 @@ button:disabled {
 }
 
 #pending-table th,
-#pending-table td {
+#pending-table td,
+#calendar-table th,
+#calendar-table td {
   border-bottom: 1px solid #d9e2ec;
   padding: 8px;
   font-size: 0.9rem;
@@ -204,3 +206,73 @@ button:disabled {
   text-align: center;
   color: #7b8794;
 }
+
+#auto-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#auto-form .field {
+  margin-bottom: 0;
+}
+
+.auto-status {
+  margin-top: 10px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.auto-status .problem {
+  color: #c53030;
+  font-weight: 600;
+}
+
+.auto-log {
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 10px;
+  border-radius: 8px;
+  max-height: 160px;
+  overflow: auto;
+  font-size: 0.75rem;
+  white-space: pre-wrap;
+}
+
+.auto-log:empty {
+  display: none;
+}
+
+#calendar-table {
+  margin-top: 10px;
+}
+
+#calendar-table tr.single td {
+  background: #fff8e1;
+}
+
+.health-banner {
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.health-banner.ok { background: #d3f9d8; color: #03543f; }
+.health-banner.warning { background: #fdecc8; color: #a15c07; }
+.health-banner.error { background: #fde2e2; color: #c53030; }
+.health-banner.unknown { background: #e4ebf5; color: #52606d; }
+
+.health-checks {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0 0 0;
+  font-size: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.health-checks .level-ok::before { content: "✓ "; color: #03543f; font-weight: 700; }
+.health-checks .level-warning::before { content: "! "; color: #a15c07; font-weight: 700; }
+.health-checks .level-error::before { content: "✗ "; color: #c53030; font-weight: 700; }

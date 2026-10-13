@@ -1,4 +1,11 @@
 import { loadConfig } from "./config.js";
+import {
+  pad,
+  timeToMinutes,
+  localToUtcIso,
+  scheduleBlocksForDiary,
+  workedMinutes
+} from "./schedule.js";
 
 function sanitizeBaseUrl(baseUrl) {
   return (baseUrl || "").trim().replace(/\/$/, "");
@@ -26,19 +33,6 @@ function getMonthBoundaries(monthValue) {
   return { from: fmt(from), to: fmt(to) };
 }
 
-function pad(num) {
-  return String(num).padStart(2, "0");
-}
-
-function parseTimeString(timeString) {
-  const [hours = "0", minutes = "0", seconds = "0"] = timeString.split(":");
-  return {
-    hours: Number(hours),
-    minutes: Number(minutes),
-    seconds: Number(seconds)
-  };
-}
-
 function normalizeTimeValue(timeString) {
   if (!timeString) {
     return "00:00:00";
@@ -50,19 +44,6 @@ function normalizeTimeValue(timeString) {
     return `${normalizedHours}:${normalizedMinutes}:${pad(Number(seconds))}`;
   }
   return `${normalizedHours}:${normalizedMinutes}:00`;
-}
-
-function buildUtcDate(dateString, timeString, offsetMinutes) {
-  const { hours, minutes, seconds } = parseTimeString(timeString);
-  const [year, month, day] = dateString.split("-").map(Number);
-  const utcMillis = Date.UTC(year, month - 1, day, hours, minutes, seconds) - offsetMinutes * 60 * 1000;
-  return new Date(utcMillis).toISOString();
-}
-
-function minutesBetween(startTime, endTime) {
-  const start = parseTimeString(startTime);
-  const end = parseTimeString(endTime);
-  return (end.hours * 60 + end.minutes) - (start.hours * 60 + start.minutes);
 }
 
 function baseSlotEntry({
@@ -105,77 +86,97 @@ function generateSlotId(date, index) {
   return `${date}-${index}-${stamp}`;
 }
 
-function buildSlotPayload(diary, config) {
+export function buildSlotPayload(diary, config) {
   const userId = Number(config.userId);
-  const offset = Number(config.utcOffsetMinutes ?? 0);
-  
-  // Detectar si es viernes (día de la semana 5)
-  const date = new Date(diary.date + "T00:00:00");
-  const isFriday = date.getDay() === 5;
-  
-  // Usar slots de viernes si es viernes, sino slots normales
-  const slotsToUse = isFriday 
-    ? (config.fridaySlots || config.defaultSlots || [])
-    : (config.defaultSlots || []);
-  
-  const slots = slotsToUse
-    .filter(slot => slot.start && slot.end)
-    .map((slot, index) => {
-      const startTime = normalizeTimeValue(slot.start);
-      const endTime = normalizeTimeValue(slot.end);
-      const inIso = buildUtcDate(diary.date, startTime, offset);
-      const outIso = buildUtcDate(diary.date, endTime, offset);
-      const totalMinutes = Math.max(minutesBetween(startTime, endTime), 0);
-      return {
-        id: generateSlotId(diary.date, index),
-        in: baseSlotEntry({ dateIso: inIso, time: startTime, signIn: true, userId }),
-        out: baseSlotEntry({ dateIso: outIso, time: endTime, signIn: false, userId }),
-        motive: null,
-        totalMin: totalMinutes
-      };
-    });
+  const date = diary.date.slice(0, 10);
+
+  // Bloques según el horario que Woffu asigna a ese día (verano, viernes…),
+  // con los bloques configurados como respaldo.
+  const schedule = scheduleBlocksForDiary(diary, config);
+
+  const slots = schedule.slots.map((slot, index) => {
+    const startTime = normalizeTimeValue(slot.start);
+    const endTime = normalizeTimeValue(slot.end);
+    return {
+      id: generateSlotId(date, index),
+      in: baseSlotEntry({ dateIso: localToUtcIso(date, startTime), time: startTime, signIn: true, userId }),
+      out: baseSlotEntry({ dateIso: localToUtcIso(date, endTime), time: endTime, signIn: false, userId }),
+      motive: null,
+      totalMin: Math.max(timeToMinutes(endTime) - timeToMinutes(startTime), 0)
+    };
+  });
 
   return {
     userId,
     comments: config.defaultComments || "",
-    date: diary.date,
+    date,
     slots,
     diaryId: diary.diaryId
   };
 }
 
-export async function fetchDiarySummary(config, monthValue) {
-  const merged = config ?? await loadConfig();
-  const baseUrl = sanitizeBaseUrl(merged.baseUrl);
+export async function fetchDiaryRange(config, from, to) {
+  const baseUrl = sanitizeBaseUrl(config.baseUrl);
   if (!baseUrl) {
     throw new Error("Configure the base URL before loading data.");
   }
-  if (!merged.userId) {
+  if (!config.userId) {
     throw new Error("Configure the User ID before loading data.");
   }
 
-  const { from, to } = getMonthBoundaries(monthValue);
-  const path = `/api/svc/core/diariesquery/users/${merged.userId}/diaries/summary/presence`;
+  const path = `/api/svc/core/diariesquery/users/${config.userId}/diaries/summary/presence`;
   const url = new URL(baseUrl + path);
-  url.searchParams.set("userId", merged.userId);
+  url.searchParams.set("userId", config.userId);
   url.searchParams.set("fromDate", from);
   url.searchParams.set("toDate", to);
-  url.searchParams.set("pageSize", "31");
+  url.searchParams.set("pageSize", "100");
   url.searchParams.set("includeHourTypes", "true");
   url.searchParams.set("includeNotHourTypes", "true");
   url.searchParams.set("includeDifference", "true");
 
   const response = await fetch(url.toString(), {
     method: "GET",
-    headers: buildHeaders(ensureToken(merged.bearerToken))
+    headers: buildHeaders(ensureToken(config.bearerToken))
   });
 
   if (!response.ok) {
     const body = await response.text();
-    throw new Error(`Error querying Woffu (${response.status}): ${body}`);
+    const error = new Error(`Error querying Woffu (${response.status}): ${body}`);
+    error.status = response.status;
+    throw error;
   }
 
   return response.json();
+}
+
+// Comprobación de última hora antes de un PUT: cuántos slots tiene ya el día.
+// Devuelve null si la respuesta no tiene un formato reconocible.
+export async function fetchExistingSlotCount(config, diarySummaryId) {
+  if (!diarySummaryId) {
+    return null;
+  }
+  const baseUrl = sanitizeBaseUrl(config.baseUrl);
+  const response = await fetch(
+    `${baseUrl}/api/svc/core/diariesquery/diarysummaries/${diarySummaryId}/workday/slots/self`,
+    { method: "GET", headers: buildHeaders(ensureToken(config.bearerToken)) }
+  );
+  if (!response.ok) {
+    return null;
+  }
+  const body = await response.json().catch(() => null);
+  if (Array.isArray(body)) {
+    return body.length;
+  }
+  if (Array.isArray(body?.slots)) {
+    return body.slots.length;
+  }
+  return null;
+}
+
+export async function fetchDiarySummary(config, monthValue) {
+  const merged = config ?? await loadConfig();
+  const { from, to } = getMonthBoundaries(monthValue);
+  return fetchDiaryRange(merged, from, to);
 }
 
 export function findPendingDiaries(summary) {
@@ -205,7 +206,7 @@ export function findPendingDiaries(summary) {
       date: diary.date,
       differenceTime: Number(diary.differenceTime ?? 0),
       isPending: Boolean(diary.isPending),
-      hasSlots: Array.isArray(diary.slots) && diary.slots.length > 0,
+      hasSlots: workedMinutes(diary) > 0,
       workedTimeFormatted: diary.workedTimeFormatted,
       name: diary.name,
       raw: diary

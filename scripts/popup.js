@@ -5,8 +5,10 @@ import {
   formatDifference,
   buildPreviewPayloads,
   buildDryRunResponse,
-  sendMultipleWorkdaySlots
+  sendMultipleWorkdaySlots,
+  fetchDiaryRange
 } from "./api.js";
+import { summarizeSchedulePeriods } from "./schedule.js";
 
 let currentConfig = { ...DEFAULT_CONFIG };
 let pendingDiaries = [];
@@ -25,6 +27,20 @@ const previewSingleBtn = document.getElementById("preview-single");
 const previewMultiBtn = document.getElementById("preview-multi");
 const sendBtn = document.getElementById("send-selection");
 const previewOutput = document.getElementById("preview-output");
+const autoForm = document.getElementById("auto-form");
+const autoStatus = document.getElementById("auto-status");
+const autoLog = document.getElementById("auto-log");
+const autoPlanBtn = document.getElementById("auto-plan");
+const autoRunBtn = document.getElementById("auto-run");
+const healthBanner = document.getElementById("health-banner");
+const healthChecks = document.getElementById("health-checks");
+const healthCheckBtn = document.getElementById("health-check");
+const renewSessionBtn = document.getElementById("renew-session");
+const testNotificationBtn = document.getElementById("test-notification");
+const calendarYear = document.getElementById("calendar-year");
+const loadCalendarBtn = document.getElementById("load-calendar");
+const calendarTable = document.getElementById("calendar-table");
+const calendarBody = document.getElementById("calendar-body");
 
 function formatDate(dateString) {
   const date = new Date(dateString + "T00:00:00");
@@ -100,10 +116,13 @@ function fillForm(config) {
   form.userId.value = config.userId || "";
   form.bearerToken.value = config.bearerToken || "";
   form.defaultComments.value = config.defaultComments || "";
-  form.utcOffset.value = Number.isFinite(config.utcOffsetMinutes) ? config.utcOffsetMinutes : 120;
   form.dryRun.checked = Boolean(config.dryRun);
   renderSlots(config.defaultSlots || [], false);
   renderSlots(config.fridaySlots || [], true);
+  autoForm.autoEnabled.checked = Boolean(config.autoEnabled);
+  autoForm.autoCutoff.value = config.autoCutoff || "17:31";
+  autoForm.lunchStart.value = config.lunchStart || "13:00";
+  autoForm.autoRenew.checked = config.autoRenew !== false;
 }
 
 function readSlotsFromForm(parentList = slotList) {
@@ -239,13 +258,176 @@ async function saveCurrentConfig() {
     userId: formData.get("userId")?.toString().trim() ?? "",
     bearerToken: formData.get("bearerToken")?.trim() ?? "",
     defaultComments: formData.get("defaultComments")?.trim() ?? "",
-    utcOffsetMinutes: Number(formData.get("utcOffset")) || 0,
     dryRun: formData.get("dryRun") === "on",
     defaultSlots: readSlotsFromForm(slotList),
-    fridaySlots: readSlotsFromForm(fridaySlotList)
+    fridaySlots: readSlotsFromForm(fridaySlotList),
+    autoEnabled: autoForm.autoEnabled.checked,
+    autoCutoff: autoForm.autoCutoff.value || "17:31",
+    lunchStart: autoForm.lunchStart.value || "13:00",
+    autoRenew: autoForm.autoRenew.checked
   };
 
   await saveConfig(currentConfig);
+}
+
+// ---------------------------------------------------------------------------
+// Modo automático (lo ejecuta el service worker; aquí solo se muestra/controla)
+// ---------------------------------------------------------------------------
+
+function sendToBackground(message) {
+  return chrome.runtime.sendMessage(message);
+}
+
+function formatDateTime(iso) {
+  return iso ? new Date(iso).toLocaleString() : "never";
+}
+
+async function refreshAutoStatus() {
+  const { state = {}, log = [] } = await sendToBackground({ action: "autoStatus" }) || {};
+  const lines = [];
+  lines.push(`Last run: ${formatDateTime(state.lastRunAt)}${state.lastTrigger ? ` (${state.lastTrigger})` : ""}`);
+  if (state.lastResult) {
+    const { registered, failed, pending } = state.lastResult;
+    lines.push(`Result: ${registered} registered, ${failed} failed, ${pending} due`);
+  }
+  autoStatus.innerHTML = lines.join("<br>");
+  autoLog.textContent = log
+    .map(entry => `${new Date(entry.ts).toLocaleString()}  ${entry.level === "error" ? "✗" : "·"} ${entry.message}`)
+    .reverse()
+    .join("\n");
+}
+
+const HEALTH_LABELS = {
+  ok: "● Automatic registration is working",
+  warning: "● Working, but needs attention",
+  error: "● Automatic registration is NOT working"
+};
+
+async function runHealthCheck() {
+  healthCheckBtn.disabled = true;
+  healthBanner.className = "health-banner unknown";
+  healthBanner.textContent = "Checking…";
+  try {
+    const result = await sendToBackground({ action: "autoHealth" });
+    healthBanner.className = `health-banner ${result.level}`;
+    healthBanner.textContent = result.error ? `● Check failed: ${result.error}` : HEALTH_LABELS[result.level];
+    healthChecks.innerHTML = "";
+    for (const check of result.checks || []) {
+      const item = document.createElement("li");
+      item.className = `level-${check.level}`;
+      const name = document.createElement("strong");
+      name.textContent = `${check.name}: `;
+      item.append(name, check.detail);
+      healthChecks.appendChild(item);
+    }
+    const sessionCheck = (result.checks || []).find(check => check.name === "Woffu session");
+    renewSessionBtn.classList.toggle("primary", sessionCheck?.level !== "ok");
+    renewSessionBtn.classList.toggle("secondary", sessionCheck?.level === "ok");
+  } finally {
+    healthCheckBtn.disabled = false;
+  }
+}
+
+async function handleRenewSession() {
+  await sendToBackground({ action: "renewNow" });
+  showMessage("The Woffu session cookie was cleared and Woffu opened in a new tab to log in again (your current token is kept until it expires). Complete the Microsoft login if asked; the new token is picked up automatically. Then reopen this popup and press “Check now”.");
+}
+
+async function saveAutoSettings() {
+  await saveCurrentConfig();
+  await sendToBackground({ action: "autoSettingsChanged" });
+  await refreshAutoStatus();
+  await runHealthCheck();
+}
+
+async function handleAutoPlan() {
+  autoPlanBtn.disabled = true;
+  try {
+    await saveCurrentConfig();
+    const result = await sendToBackground({ action: "autoPlan" });
+    if (result?.error) {
+      showMessage(`Simulation failed: ${result.error}`);
+    } else if (!result?.days?.length) {
+      showMessage(`Nothing to register between ${result.range.from} and ${result.range.to}.`);
+    } else {
+      showMessage(
+        `Would register ${result.days.length} day(s) (up to ${result.range.to}):\n\n` +
+        result.days
+          .map(day => `${day.date}  ${day.blocks}  [${day.source}]${day.note ? `  ⚠ ${day.note}` : ""}`)
+          .join("\n")
+      );
+    }
+    await refreshAutoStatus();
+  } finally {
+    autoPlanBtn.disabled = false;
+  }
+}
+
+function formatShortDate(dateString) {
+  return new Date(`${dateString}T12:00:00`).toLocaleDateString(undefined, { day: "2-digit", month: "short" });
+}
+
+async function handleLoadCalendar() {
+  const year = Number(calendarYear.value) || new Date().getFullYear();
+  loadCalendarBtn.disabled = true;
+  loadCalendarBtn.textContent = "Loading...";
+  try {
+    const diaries = [];
+    for (let month = 1; month <= 12; month++) {
+      const from = `${year}-${String(month).padStart(2, "0")}-01`;
+      const last = new Date(year, month, 0).getDate();
+      const to = `${year}-${String(month).padStart(2, "0")}-${last}`;
+      const summary = await fetchDiaryRange(currentConfig, from, to);
+      diaries.push(...(summary.diaries || []));
+    }
+    const periods = summarizeSchedulePeriods(diaries, currentConfig);
+    calendarBody.innerHTML = "";
+    for (const period of periods) {
+      const row = document.createElement("tr");
+      const isSingleBlock = period.weekday && !period.weekday.includes(",");
+      if (isSingleBlock) {
+        row.className = "single";
+      }
+      const cells = [
+        `${formatShortDate(period.from)} – ${formatShortDate(period.to)}${isSingleBlock ? " ☀" : ""}`,
+        period.weekday || "—",
+        period.friday || "—"
+      ];
+      for (const text of cells) {
+        const cell = document.createElement("td");
+        cell.textContent = text;
+        row.appendChild(cell);
+      }
+      calendarBody.appendChild(row);
+    }
+    calendarTable.hidden = periods.length === 0;
+    if (!periods.length) {
+      showMessage(`Woffu returned no schedule for ${year}.`);
+    }
+  } catch (error) {
+    showMessage(`Could not load the schedule: ${error.message}`);
+  } finally {
+    loadCalendarBtn.disabled = false;
+    loadCalendarBtn.textContent = "Load schedule";
+  }
+}
+
+async function handleAutoRun() {
+  if (!confirm("Register now every due working day that is still empty?")) {
+    return;
+  }
+  autoRunBtn.disabled = true;
+  autoRunBtn.textContent = "Running...";
+  try {
+    await saveCurrentConfig();
+    const result = await sendToBackground({ action: "autoRun" });
+    showMessage(JSON.stringify(result, null, 2));
+    await runHealthCheck();
+    await refreshAutoStatus();
+  } finally {
+    autoRunBtn.disabled = false;
+    autoRunBtn.textContent = "Run now";
+  }
 }
 
 function setupAutoSave() {
@@ -412,13 +594,24 @@ function bindEvents() {
   previewSingleBtn.addEventListener("click", handlePreviewSingle);
   previewMultiBtn.addEventListener("click", handlePreviewMulti);
   sendBtn.addEventListener("click", handleSendSelection);
+  autoForm.querySelectorAll("input").forEach(input => input.addEventListener("change", saveAutoSettings));
+  autoPlanBtn.addEventListener("click", handleAutoPlan);
+  autoRunBtn.addEventListener("click", handleAutoRun);
+  loadCalendarBtn.addEventListener("click", handleLoadCalendar);
+  healthCheckBtn.addEventListener("click", () => runHealthCheck().then(refreshAutoStatus));
+  renewSessionBtn.addEventListener("click", handleRenewSession);
+  testNotificationBtn.addEventListener("click", () => sendToBackground({ action: "testNotification" }));
 }
 
 async function init() {
   bindEvents();
   monthInput.value = getDefaultMonthValue();
+  calendarYear.value = new Date().getFullYear();
   currentConfig = await loadConfig();
   fillForm(currentConfig);
+  runHealthCheck()
+    .then(refreshAutoStatus)
+    .catch(error => console.info("Could not load automatic mode status:", error));
   
   // Intentar detectar datos del contexto actual
   try {
@@ -434,10 +627,6 @@ async function init() {
       }
       if (data.userId && !currentConfig.userId) {
         form.userId.value = data.userId;
-        detected = true;
-      }
-      if (data.utcOffset !== null && data.utcOffset !== undefined) {
-        form.utcOffset.value = data.utcOffset;
         detected = true;
       }
 

@@ -7,6 +7,58 @@
 </head>
 <body>
   <main class="container">
+    <section class="auto">
+      <h1>Automatic mode</h1>
+      <div id="health-banner" class="health-banner unknown">Checking…</div>
+      <form id="auto-form">
+        <label class="toggle">
+          <input id="autoEnabled" name="autoEnabled" type="checkbox">
+          <span>Register every working day automatically</span>
+        </label>
+        <div class="field inline">
+          <label for="autoCutoff">Register from</label>
+          <input id="autoCutoff" name="autoCutoff" type="time" value="17:31">
+        </div>
+        <div class="field inline">
+          <label for="lunchStart">Lunch starts at</label>
+          <input id="lunchStart" name="lunchStart" type="time" value="13:00">
+        </div>
+        <span class="hint">Blocks come from the schedule Woffu assigns to each day: split day with lunch break, or a single block on Fridays and during the summer intensive schedule (see "Woffu schedule" below). Weekends, holidays, absences and days that already have time are never touched.</span>
+        <label class="toggle">
+          <input id="autoRenew" name="autoRenew" type="checkbox" checked>
+          <span>Renew the session in a background tab when it expires</span>
+        </label>
+      </form>
+      <ul id="health-checks" class="health-checks"></ul>
+      <div id="auto-status" class="auto-status">Loading status…</div>
+      <div class="actions">
+        <button id="health-check" type="button" class="secondary">Check now</button>
+        <button id="renew-session" type="button" class="secondary">Renew session</button>
+        <button id="test-notification" type="button" class="secondary">Test notification</button>
+      </div>
+      <div class="actions">
+        <button id="auto-plan" type="button" class="secondary">Simulate</button>
+        <button id="auto-run" type="button" class="primary">Run now</button>
+      </div>
+      <pre id="auto-log" class="auto-log"></pre>
+    </section>
+
+    <section class="calendar">
+      <h2>Woffu schedule</h2>
+      <span class="hint">What the automatic mode will register, period by period, as Woffu defines it (summer intensive schedule included).</span>
+      <div class="field inline">
+        <label for="calendar-year">Year</label>
+        <input id="calendar-year" type="number" min="2020" max="2100">
+        <button id="load-calendar" type="button" class="secondary">Load schedule</button>
+      </div>
+      <table id="calendar-table" hidden>
+        <thead>
+          <tr><th>Period</th><th>Mon–Thu</th><th>Friday</th></tr>
+        </thead>
+        <tbody id="calendar-body"></tbody>
+      </table>
+    </section>
+
     <section class="config">
       <h1>Configuration</h1>
       <form id="config-form">
@@ -26,18 +78,13 @@
           <label for="defaultComments">Comment</label>
           <input id="defaultComments" name="defaultComments" type="text" placeholder="Optional">
         </div>
-        <div class="field">
-          <label for="utcOffset">UTC Offset (minutes)</label>
-          <input id="utcOffset" name="utcOffset" type="number" step="1" value="120">
-          <span class="hint">Example: Madrid in summer time = 120</span>
-        </div>
         <fieldset class="slots">
-          <legend>Time blocks (Monday-Thursday)</legend>
+          <legend>Fallback blocks (Monday-Thursday)</legend>
           <div id="slot-list"></div>
           <button type="button" id="add-slot">Add block</button>
         </fieldset>
         <fieldset class="slots">
-          <legend>Time blocks (Friday)</legend>
+          <legend>Fallback blocks (Friday)</legend>
           <div id="friday-slot-list"></div>
           <button type="button" id="add-friday-slot">Add block</button>
         </fieldset>

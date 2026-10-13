@@ -12,8 +12,12 @@ export const DEFAULT_CONFIG = {
   fridaySlots: [
     { start: "08:00", end: "15:00" }
   ],
-  utcOffsetMinutes: 120,
-  dryRun: true
+  dryRun: true,
+  // Modo automático (service worker)
+  autoEnabled: false,
+  autoCutoff: "17:31",
+  lunchStart: "13:00",
+  autoRenew: true
 };
 
 function isExtensionContext() {
