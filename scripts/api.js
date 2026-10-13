@@ -149,8 +149,11 @@ export async function fetchDiaryRange(config, from, to) {
   return response.json();
 }
 
-// Comprobación de última hora antes de un PUT: cuántos slots tiene ya el día.
-// Devuelve null si la respuesta no tiene un formato reconocible.
+// Comprobación de última hora antes de un PUT: cuántos fichajes reales tiene
+// ya el día. Este endpoint también devuelve los bloques *propuestos* según el
+// horario teórico (los que la web precarga al editar), así que solo cuentan
+// los slots con un fichaje guardado (signId asignado). Devuelve null si la
+// respuesta no tiene un formato reconocible.
 export async function fetchExistingSlotCount(config, diarySummaryId) {
   if (!diarySummaryId) {
     return null;
@@ -164,13 +167,20 @@ export async function fetchExistingSlotCount(config, diarySummaryId) {
     return null;
   }
   const body = await response.json().catch(() => null);
-  if (Array.isArray(body)) {
-    return body.length;
+  const slots = Array.isArray(body) ? body : body?.slots;
+  if (!Array.isArray(slots)) {
+    return null;
   }
-  if (Array.isArray(body?.slots)) {
-    return body.slots.length;
-  }
-  return null;
+  return slots.filter(isSavedSlot).length;
+}
+
+function isSavedSign(sign) {
+  const signId = Number(sign?.signId ?? sign?.SignId ?? 0);
+  return signId > 0 && !(sign.deleted ?? sign.Deleted);
+}
+
+export function isSavedSlot(slot) {
+  return isSavedSign(slot?.in) || isSavedSign(slot?.out);
 }
 
 export async function fetchDiarySummary(config, monthValue) {

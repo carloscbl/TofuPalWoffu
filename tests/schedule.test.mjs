@@ -126,3 +126,15 @@ test("summarizes the calendar into periods (summer intensive schedule)", () => {
     ]
   );
 });
+
+test("proposed slots from the theoretical schedule do not count as existing time", async () => {
+  const { isSavedSlot } = await import("../scripts/api.js");
+  const proposed = { in: { signId: 0, time: "08:00:00" }, out: { signId: 0, time: "13:00:00" } };
+  const saved = { in: { signId: 987, time: "08:00:00" }, out: { signId: 988, time: "13:00:00" } };
+  const openIn = { in: { SignId: 990 }, out: null };
+  const deleted = { in: { signId: 991, deleted: true }, out: { signId: 992, deleted: true } };
+  assert.equal(isSavedSlot(proposed), false);
+  assert.equal(isSavedSlot(saved), true);
+  assert.equal(isSavedSlot(openIn), true);
+  assert.equal(isSavedSlot(deleted), false);
+});
